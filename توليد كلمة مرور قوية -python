@@ -1,0 +1,64 @@
+# wifi_secure_helper.py
+# استخدام: python wifi_secure_helper.py
+# يعمل مع بايثون 3.7+
+
+import secrets
+import string
+import math
+
+def generate_password(length=16, use_symbols=True):
+    """ يولد كلمة مرور عشوائية آمنة بطول length """
+    alphabet = string.ascii_lowercase + string.ascii_uppercase + string.digits
+    if use_symbols:
+        alphabet += "!@#$%^&*()-_=+[]{};:,.<>/?"
+    pwd = ''.join(secrets.choice(alphabet) for _ in range(length))
+    return pwd, alphabet
+
+def estimate_entropy(password, alphabet):
+    """ يقدّر الـ entropy بالبتات: length * log2(|alphabet|)
+        ويعطي تقييم تقريبي: ضعيف/معتدل/قوي/قوي جداً
+    """
+    L = len(password)
+    A = len(set(alphabet))
+    bits = L * math.log2(A)
+    # تقييم بسيط
+    if bits < 40:
+        rating = "ضعيف"
+    elif bits < 60:
+        rating = "معتدل"
+    elif bits < 80:
+        rating = "قوي"
+    else:
+        rating = "قوي جداً"
+    return bits, rating
+
+def wifi_qr_text(ssid, password, auth="WPA"):
+    """ ينشئ نص QR قياسي يمكن لصقه في مولد QR خارجي:
+        مثال: WIFI:T:WPA;S:MySSID;P:MyPass;;
+    """
+    # يتعامل مع ; و : و \ من خلال استبدال بسيط (قابِل للتوسيع)
+    ssid_esc = ssid.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
+    pwd_esc = password.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
+    return f"WIFI:T:{auth};S:{ssid_esc};P:{pwd_esc};;"
+
+def main():
+    print("=== أداة مساعدة لتأمين Wi-Fi (توليد باسورد + تقييم القوة) ===\n")
+    # إعدادات افتراضية — غيرها كما تحب
+    length = 20
+    use_symbols = True
+
+    pwd, alphabet = generate_password(length=length, use_symbols=use_symbols)
+    bits, rating = estimate_entropy(pwd, alphabet)
+
+    print(f"كلمة المرور المقترحة ({length} حرف):\n{pwd}\n")
+    print(f"تقدير القوة: {bits:.1f} بت — التقييم: {rating}\n")
+
+    # مثال سلاسل QR (انسخ النص وولّيه لمولد QR آمن إذا أردت)
+    example_ssid = "MyHomeWiFi"
+    qr_text = wifi_qr_text(example_ssid, pwd, auth="WPA")
+    print("نص QR (انسخه إلى مولد QR لإنشاء رمز QR للانضمام السريع):")
+    print(qr_text)
+    print("\nملاحظة: إذا أردت كلمة أطول غيّر المتغير 'length' في الكود.")
+
+if __name__ == "__main__":
+    main()
